@@ -238,18 +238,6 @@
       </IconWrapper>
     );
 
-    const UploadIcon = (props) => (
-      <IconWrapper {...props}>
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
-      </IconWrapper>
-    );
-
-    const MoveIcon = (props) => (
-      <IconWrapper {...props}>
-        <polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/>
-      </IconWrapper>
-    );
-
     const UndoIcon = (props) => (
       <IconWrapper {...props}>
         <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
@@ -1015,7 +1003,6 @@
             <div className="p-4 overflow-y-auto flex-1 font-mono text-xs bg-slate-950 leading-relaxed select-all flex flex-col">
               {dialect === "vectorial" ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-slate-400 font-display text-center gap-2 h-full py-10">
-               <span className="text-5xl mb-2">🚀</span> 
                   <p className="text-lg font-bold text-cyan-400">Opción premium para más adelante</p>
                   <p className="text-xs max-w-sm">¡Pronto podrás exportar tu modelo directamente a bases de datos vectoriales impulsadas por Inteligencia Artificial!</p>
                 </div>
@@ -1050,10 +1037,11 @@
       const [selectedEntityId, setSelectedEntityId] = useState(null);
       const [selectedRelId, setSelectedRelId] = useState(null);
       
-      const [toolMode, setToolMode] = useState("select"); // 'select' | 'connect' | 'pan'
+      const [toolMode, setToolMode] = useState("select"); // 'select' | 'connect'
       const [connectFrom, setConnectFrom] = useState(null);
       const [editingEntityModalId, setEditingEntityModalId] = useState(null);
       const [showSqlModal, setShowSqlModal] = useState(false);
+      const [showConfirmModal, setShowConfirmModal] = useState(false); // NUEVO ESTADO PARA EL MODAL DE CONFIRMACIÓN
       
       const [zoom, setZoom] = useState(1);
       const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -1066,7 +1054,41 @@
       const [historyIdx, setHistoryIdx] = useState(-1);
 
       const svgRef = useRef(null);
-      const canvasRef = useRef(null); // NUEVO: Referencia para el contenedor del canvas
+      const canvasRef = useRef(null);
+
+      // CONTROL DE HISTORIAL DEL NAVEGADOR
+      useEffect(() => {
+        if (!window.history.state || !window.history.state.step) {
+          window.history.replaceState({ step: "setup" }, "", window.location.href);
+        }
+      }, []);
+
+      useEffect(() => {
+        const handlePopState = (e) => {
+          const targetStep = e.state?.step || "setup";
+          
+          if (step === "editor" && targetStep !== "editor") {
+            if (entities.length > 0) {
+              // Si el usuario intentó salir del editor, cancelamos esa acción volviendo a empujar 'editor' al historial
+              window.history.pushState({ step: "editor" }, "", window.location.href);
+              setShowConfirmModal(true);
+            } else {
+              setStep(targetStep);
+            }
+          } else {
+            setStep(targetStep);
+          }
+        };
+
+        window.addEventListener("popstate", handlePopState);
+        return () => window.removeEventListener("popstate", handlePopState);
+      }, [step, entities.length]);
+
+      // Función para navegar y registrar en el historial
+      const navigateTo = (newStep) => {
+        window.history.pushState({ step: newStep }, "", window.location.href);
+        setStep(newStep);
+      };
 
       const pushHistory = useCallback((newEntities, newRels) => {
         const nextState = { entities: newEntities, rels: newRels };
@@ -1094,7 +1116,7 @@
 
       function pickTemplate(t) {
         setForm({ ...initialForm, templateId: t.id, projectName: t.name, description: t.description });
-        setStep("questionnaire");
+        navigateTo("questionnaire");
       }
 
       function pickCustom() {
@@ -1114,7 +1136,7 @@
             }
           ];
           loadDiagram(basicEntities, []);
-          setStep("editor");
+          navigateTo("editor");
         }, 300);
       }
 
@@ -1173,7 +1195,7 @@
         setTimeout(() => {
           const fb = buildFallback(form);
           loadDiagram(fb.entities, fb.relationships);
-          setStep("editor");
+          navigateTo("editor");
         }, 300);
       }
 
@@ -1279,7 +1301,8 @@
       };
 
       const handlePointerDownCanvas = (e) => {
-        if (e.button === 1 || toolMode === "pan" || e.spaceKey) {
+        // Se quitó el modo "pan" del click izquierdo, solo funciona con rueda del ratón o espaciadora
+        if (e.button === 1 || e.spaceKey) {
           setIsPanning(true);
           setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
           return;
@@ -1315,20 +1338,18 @@
         }
       };
 
-      // NUEVO: Efecto para manejar el zoom de forma activa y evitar el error "passive"
       useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const handleWheel = (e) => {
           if (e.ctrlKey || e.metaKey) {
-            e.preventDefault(); // Ahora esto es legal
+            e.preventDefault(); 
             const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
             setZoom((z) => Math.min(2.2, Math.max(0.4, z * zoomFactor)));
           }
         };
 
-        // El { passive: false } es la clave para que preventDefault funcione sin errores
         canvas.addEventListener("wheel", handleWheel, { passive: false });
         
         return () => {
@@ -1419,33 +1440,22 @@
         img.src = url;
       };
 
-      const importJSON = (e) => {
-        const fileReader = new FileReader();
-        if (e.target.files && e.target.files[0]) {
-          fileReader.readAsText(e.target.files[0], "UTF-8");
-          fileReader.onload = (event) => {
-            try {
-              const parsed = JSON.parse(event.target.result);
-              if (parsed.entities && parsed.relationships) {
-                setEntities(parsed.entities);
-                setRelationships(parsed.relationships);
-                pushHistory(parsed.entities, parsed.relationships);
-              }
-            } catch (err) {
-              alert("Archivo JSON inválido.");
-            }
-          };
+      const startNewDiagram = () => {
+        if (entities.length > 0) {
+          setShowConfirmModal(true);
+        } else {
+          confirmStartNewDiagram();
         }
       };
 
-      const startNewDiagram = () => {
-        if (entities.length > 0 && !window.confirm("¿Descartar este diagrama y empezar uno nuevo?")) return;
+      const confirmStartNewDiagram = () => {
+        setShowConfirmModal(false);
         setForm(initialForm);
         setEntities([]);
         setRelationships([]);
         setSelectedEntityId(null);
         setSelectedRelId(null);
-        setStep("setup");
+        navigateTo("setup");
       };
 
       const canGenerate = form.description.trim().length > 10;
@@ -1492,7 +1502,7 @@
             <div className="flex-1 overflow-y-auto bg-[#fafafa] text-slate-900">
               <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-14">
                 <StepIndicator index={1} />
-                <button onClick={() => setStep("setup")} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 mt-4 sm:mt-6 mb-4 transition-colors">
+                <button onClick={() => window.history.back()} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 mt-4 sm:mt-6 mb-4 transition-colors">
                   <ArrowLeft size={13} /> volver
                 </button>
                 <h2 className="font-display text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
@@ -1519,9 +1529,10 @@
                     <textarea
                       id="projectDescription"
                       name="projectDescription"
-                      className={`mt-1.5 w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-slate-900 shadow-sm transition-colors ${form.templateId ? 'opacity-80 bg-slate-50' : ''}`}
+                      className={`mt-1.5 w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-slate-900 shadow-sm transition-colors ${form.templateId ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''}`}
                       rows={5}
                       readOnly={!!form.templateId}
+                      disabled={!!form.templateId}
                       value={form.description}
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
                       placeholder="Contá qué entidades participan, qué hace cada una y cómo se relacionan entre sí..."
@@ -1601,7 +1612,16 @@
                     </button>
                   </div>
 
-                  {/* 2. Undo / Redo */}
+                  {/* 2. SQL */}
+                  <button
+                    onClick={() => setShowSqlModal(true)}
+                    className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700"
+                    title="Ver Script SQL DDL"
+                  >
+                    <CodeIcon size={15} /> SQL
+                  </button>
+
+                  {/* 3. Undo / Redo */}
                   <div className="flex items-center gap-1">
                     <button
                       disabled={historyIdx <= 0}
@@ -1623,7 +1643,7 @@
 
                   <div className="h-4 w-px bg-slate-800 my-auto" />
 
-                  {/* 3. + Tabla */}
+                  {/* 4. + Tabla */}
                   <button
                     onClick={createNewEntity}
                     className="flex items-center gap-1.5 text-xs bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg transition-colors shadow-md shadow-cyan-500/10"
@@ -1631,7 +1651,7 @@
                     <PlusIcon size={15} /> Tabla
                   </button>
 
-                  {/* 4. Agregar flecha */}
+                  {/* 5. Agregar flecha */}
                   <button
                     onClick={() => {
                       setToolMode(toolMode === "connect" ? "select" : "connect");
@@ -1642,24 +1662,8 @@
                     <LinkIcon size={15} /> {toolMode === "connect" ? "Seleccioná Destino..." : "Agregar flecha"}
                   </button>
 
-                  {/* 5. Controles complementarios */}
-                  <button
-                    onClick={() => setToolMode(toolMode === "pan" ? "select" : "pan")}
-                    className={`p-1.5 rounded-lg border transition-all ${toolMode === "pan" ? "bg-cyan-500 text-slate-950 border-cyan-400" : "bg-slate-800 text-slate-300 border-slate-700"}`}
-                    title="Modo Panorámico (Mover Lienzo)"
-                  >
-                    <MoveIcon size={16} />
-                  </button>
-
+                  {/* 6. Controles complementarios */}
                   <div className="h-4 w-px bg-slate-800 my-auto" />
-
-                  <button
-                    onClick={() => setShowSqlModal(true)}
-                    className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700"
-                    title="Ver Script SQL DDL"
-                  >
-                    <CodeIcon size={15} /> SQL
-                  </button>
 
                   <button
                     onClick={exportPNG}
@@ -1669,10 +1673,6 @@
                     <DownloadIcon size={15} />
                   </button>
 
-                  <label htmlFor="importJsonInput" className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 cursor-pointer" title="Cargar JSON">
-                    <UploadIcon size={15} />
-                    <input id="importJsonInput" name="importJsonInput" type="file" accept=".json" onChange={importJSON} className="hidden" />
-                  </label>
                 </div>
               </header>
 
@@ -1680,15 +1680,15 @@
               {/* LIENZO + PANEL LATERAL */}
               <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
                 {/* CANVAS CON SCROLL LIBRE EN CELULAR Y ESCRITORIO */}
+                {/* //Soff aqui color */}
                 <div
-                  ref={canvasRef} // NUEVO: Atamos la referencia aquí
-                  className={`flex-1 bg-slate-950 relative overflow-auto touch-canvas ${toolMode === "pan" || isPanning ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair"}`}
+                  ref={canvasRef}
+                  className={`flex-1 bg-slate-900 relative overflow-auto touch-canvas ${isPanning ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair"}`}
                   onPointerDown={handlePointerDownCanvas}
                   onPointerMove={handlePointerMoveCanvas}
                   onPointerUp={handlePointerUpCanvas}
                   onPointerCancel={handlePointerUpCanvas}
                   onPointerLeave={handlePointerUpCanvas}
-                  // QUITADO: onWheel={handleWheelZoom} de React porque ahora usamos el nativo arriba
                 >
                   <svg
                     ref={svgRef}
@@ -1958,6 +1958,32 @@
                   relationships={relationships}
                   onClose={() => setShowSqlModal(false)}
                 />
+              )}
+              
+              {/* MODAL DE CONFIRMACIÓN AL VOLVER */}
+              {showConfirmModal && (
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in">
+                  <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden zoom-in-95">
+                    <div className="p-6">
+                      <h3 className="font-display font-bold text-lg text-slate-100 mb-2">¿Volver al inicio?</h3>
+                      <p className="text-sm text-slate-400">Si volvés al inicio se perderá el diagrama actual. ¿Estás seguro de que querés descartarlo?</p>
+                    </div>
+                    <div className="px-6 py-4 bg-slate-950/50 border-t border-slate-800 flex justify-end gap-3 shrink-0">
+                      <button
+                        onClick={() => setShowConfirmModal(false)}
+                        className="px-4 py-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={confirmStartNewDiagram}
+                        className="px-4 py-2 text-sm font-semibold bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg border border-red-500/20 transition-colors"
+                      >
+                        Sí, descartar
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
             </>
           )}

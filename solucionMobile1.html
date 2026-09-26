@@ -238,18 +238,6 @@
       </IconWrapper>
     );
 
-    const UploadIcon = (props) => (
-      <IconWrapper {...props}>
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
-      </IconWrapper>
-    );
-
-    const MoveIcon = (props) => (
-      <IconWrapper {...props}>
-        <polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/>
-      </IconWrapper>
-    );
-
     const UndoIcon = (props) => (
       <IconWrapper {...props}>
         <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
@@ -1050,7 +1038,7 @@
       const [selectedEntityId, setSelectedEntityId] = useState(null);
       const [selectedRelId, setSelectedRelId] = useState(null);
       
-      const [toolMode, setToolMode] = useState("select"); // 'select' | 'connect' | 'pan'
+      const [toolMode, setToolMode] = useState("select"); // 'select' | 'connect'
       const [connectFrom, setConnectFrom] = useState(null);
       const [editingEntityModalId, setEditingEntityModalId] = useState(null);
       const [showSqlModal, setShowSqlModal] = useState(false);
@@ -1279,7 +1267,7 @@
       };
 
       const handlePointerDownCanvas = (e) => {
-        if (e.button === 1 || toolMode === "pan" || e.spaceKey) {
+        if (e.button === 1 || e.spaceKey) {
           setIsPanning(true);
           setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
           return;
@@ -1419,25 +1407,6 @@
         img.src = url;
       };
 
-      const importJSON = (e) => {
-        const fileReader = new FileReader();
-        if (e.target.files && e.target.files[0]) {
-          fileReader.readAsText(e.target.files[0], "UTF-8");
-          fileReader.onload = (event) => {
-            try {
-              const parsed = JSON.parse(event.target.result);
-              if (parsed.entities && parsed.relationships) {
-                setEntities(parsed.entities);
-                setRelationships(parsed.relationships);
-                pushHistory(parsed.entities, parsed.relationships);
-              }
-            } catch (err) {
-              alert("Archivo JSON inválido.");
-            }
-          };
-        }
-      };
-
       const startNewDiagram = () => {
         if (entities.length > 0 && !window.confirm("¿Descartar este diagrama y empezar uno nuevo?")) return;
         setForm(initialForm);
@@ -1519,9 +1488,10 @@
                     <textarea
                       id="projectDescription"
                       name="projectDescription"
-                      className={`mt-1.5 w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-slate-900 shadow-sm transition-colors ${form.templateId ? 'opacity-80 bg-slate-50' : ''}`}
+                      className={`mt-1.5 w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-slate-900 shadow-sm transition-colors ${form.templateId ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''}`}
                       rows={5}
                       readOnly={!!form.templateId}
+                      disabled={!!form.templateId}
                       value={form.description}
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
                       placeholder="Contá qué entidades participan, qué hace cada una y cómo se relacionan entre sí..."
@@ -1643,14 +1613,6 @@
                   </button>
 
                   {/* 5. Controles complementarios */}
-                  <button
-                    onClick={() => setToolMode(toolMode === "pan" ? "select" : "pan")}
-                    className={`p-1.5 rounded-lg border transition-all ${toolMode === "pan" ? "bg-cyan-500 text-slate-950 border-cyan-400" : "bg-slate-800 text-slate-300 border-slate-700"}`}
-                    title="Modo Panorámico (Mover Lienzo)"
-                  >
-                    <MoveIcon size={16} />
-                  </button>
-
                   <div className="h-4 w-px bg-slate-800 my-auto" />
 
                   <button
@@ -1668,11 +1630,6 @@
                   >
                     <DownloadIcon size={15} />
                   </button>
-
-                  <label htmlFor="importJsonInput" className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 cursor-pointer" title="Cargar JSON">
-                    <UploadIcon size={15} />
-                    <input id="importJsonInput" name="importJsonInput" type="file" accept=".json" onChange={importJSON} className="hidden" />
-                  </label>
                 </div>
               </header>
 
@@ -1682,13 +1639,12 @@
                 {/* CANVAS CON SCROLL LIBRE EN CELULAR Y ESCRITORIO */}
                 <div
                   ref={canvasRef} // NUEVO: Atamos la referencia aquí
-                  className={`flex-1 bg-slate-950 relative overflow-auto touch-canvas ${toolMode === "pan" || isPanning ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair"}`}
+                  className={`flex-1 bg-slate-950 relative overflow-auto touch-canvas ${isPanning ? "cursor-grabbing" : toolMode === "connect" ? "cursor-crosshair" : "cursor-default"}`}
                   onPointerDown={handlePointerDownCanvas}
                   onPointerMove={handlePointerMoveCanvas}
                   onPointerUp={handlePointerUpCanvas}
                   onPointerCancel={handlePointerUpCanvas}
                   onPointerLeave={handlePointerUpCanvas}
-                  // QUITADO: onWheel={handleWheelZoom} de React porque ahora usamos el nativo arriba
                 >
                   <svg
                     ref={svgRef}
