@@ -24,8 +24,7 @@
     
     html, body, #root {
       width: 100%;
-      height: 100vh;
-      height: 100dvh; /* Medida dinámica para que NUNCA se corte en celular */
+      height: 100%;
       margin: 0;
       padding: 0;
       overflow: hidden;
@@ -36,7 +35,6 @@
     .touch-canvas {
       -webkit-user-select: none;
       user-select: none;
-      touch-action: none; /* Solo bloqueamos el scroll nativo dentro del lienzo para que las tablas se arrastren perfecto */
     }
 
     @media print {
@@ -728,7 +726,7 @@
                     name="modalEntityName"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-base font-mono font-bold text-slate-100 focus:outline-none focus:border-cyan-400"
                     value={entity.name}
-                    onChange={(e) => onUpdateEntity(entity.id, { name: e.target.value.toLowerCase().replace(/\s+/g, "_") }) }
+                    onChange={(e) => onUpdateEntity(entity.id, { name: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
                     placeholder="ej_tabla"
                   />
                 </div>
@@ -1475,10 +1473,10 @@
       const canGenerate = form.description.trim().length > 10;
 
       return (
-        <div className="flex flex-col h-[100dvh] w-screen bg-slate-950 text-slate-100 overflow-hidden font-body select-none">
+        <div className="flex flex-col h-full w-full bg-slate-950 text-slate-100 overflow-hidden font-body select-none">
           {step === "setup" && (
             <div className="flex-1 overflow-y-auto bg-[#fafafa] text-slate-900">
-              <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:py-14">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-20 sm:py-14">
                 <StepIndicator index={0} />
                 <h1 className="font-display text-2xl sm:text-4xl font-bold mt-4 sm:mt-6 mb-2">ER Studio</h1>
                 <p className="text-slate-500 text-xs sm:text-sm mb-6 sm:mb-10 max-w-xl">
@@ -1514,7 +1512,7 @@
 
           {step === "questionnaire" && (
             <div className="flex-1 overflow-y-auto bg-[#fafafa] text-slate-900">
-              <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:py-14">
+              <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 pb-20 sm:py-14">
                 <StepIndicator index={1} />
                 <button onClick={() => window.history.back()} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 mt-4 sm:mt-6 mb-4 transition-colors">
                   <ArrowLeft size={13} /> volver
@@ -1742,6 +1740,7 @@
                               setSelectedEntityId(null);
                             }}
                             className="cursor-pointer group"
+                            style={{ touchAction: "none" }}
                           >
                             <path
                               d={pathData}
@@ -1792,6 +1791,7 @@
                               e.stopPropagation();
                               setEditingEntityModalId(ent.id);
                             }}
+                            style={{ touchAction: "none" }}
                           >
                             <rect
                               width={CARD_W}
@@ -1825,7 +1825,7 @@
                               >
                                 <rect width="55" height="22" rx="6" fill="#0284c7" />
                                 <text x="27" y="15" fontSize="10" fontWeight="700" fill="#ffffff" textAnchor="middle" className="font-display">
-                                  ✏️️ Editar
+                                  ✏️ Editar
                                 </text>
                               </g>
                             )}
@@ -1859,7 +1859,7 @@
                 </div>
 
                 {/* PANEL LATERAL ORIGINAL INTACTO */}
-                <aside className="no-print w-full md:w-80 shrink-0 border-t md:border-t-0 md:border-l border-slate-800 bg-slate-900 p-4 pb-20 md:pb-4 overflow-y-auto max-h-72 sm:max-h-80 md:max-h-full">
+                <aside className="no-print w-full md:w-80 shrink-0 border-t md:border-t-0 md:border-l border-slate-800 bg-slate-900 p-4 pb-12 md:pb-4 overflow-y-auto max-h-72 sm:max-h-80 md:max-h-full">
                   {selectedEntity ? (
                     <div className="flex flex-col gap-4">
                       <div>
@@ -2011,5 +2011,4 @@
   </script>
 </body>
 </html>
-
 ```eof
