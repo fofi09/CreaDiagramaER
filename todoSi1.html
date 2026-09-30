@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ER Studio</title>
+  <title>ER Studio - Diseñador e Inspector de Bases de Datos</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -17,54 +17,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
-  <style>
-    .font-display { font-family: 'Space Grotesk', sans-serif; }
-    .font-mono { font-family: 'JetBrains Mono', monospace; }
-    .font-body { font-family: 'Inter', sans-serif; }
-    
-    html, body, #root {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      /* background-color: #030712; */
-      /* background-color: #1749d3; */
-    }
-
-    .touch-canvas {
-      -webkit-user-select: none;
-      user-select: none;
-      /* touch-action: none; SE ELIMINA PARA PERMITIR SCROLL EN CELULARES */
-    }
-
-    @media print {
-      .no-print { display: none !important; }
-    }
-
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #090d16;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #1e293b;
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #334155;
-    }
-
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-  </style>
+  <link rel="stylesheet" href="estilos.css">
+ 
 </head>
 <body class="bg-[#fafafa] text-slate-900 font-body antialiased selection:bg-cyan-500 selection:text-slate-950">
   <div id="root"></div>
@@ -1739,7 +1693,6 @@
                               setSelectedEntityId(null);
                             }}
                             className="cursor-pointer group"
-                            style={{ touchAction: "none" }}
                           >
                             <path
                               d={pathData}
@@ -1790,7 +1743,6 @@
                               e.stopPropagation();
                               setEditingEntityModalId(ent.id);
                             }}
-                            style={{ touchAction: "none" }}
                           >
                             <rect
                               width={CARD_W}
