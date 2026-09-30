@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ER Studio - Diseñador e Inspector de Bases de Datos</title>
+  <title>ER Studio</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -35,7 +35,7 @@
     .touch-canvas {
       -webkit-user-select: none;
       user-select: none;
-      touch-action: none;
+      /* touch-action: none; SE ELIMINA PARA PERMITIR SCROLL EN CELULARES */
     }
 
     @media print {
@@ -1312,15 +1312,14 @@
       };
 
       const handlePointerDownCanvas = (e) => {
-        // Siempre deseleccionamos si tocan el fondo
-        setSelectedEntityId(null);
-        setSelectedRelId(null);
-
-        // Permitimos panear con click central (rueda), barra espaciadora, O al tocar con un dedo en celulares
-        if (e.button === 1 || e.spaceKey || e.pointerType === "touch") {
+        // Se quitó el modo "pan" del click izquierdo, solo funciona con rueda del ratón o espaciadora
+        if (e.button === 1 || e.spaceKey) {
           setIsPanning(true);
           setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+          return;
         }
+        setSelectedEntityId(null);
+        setSelectedRelId(null);
       };
 
       const handlePointerMoveCanvas = (e) => {
@@ -1370,8 +1369,7 @@
       }, []);
 
       const handleEntityPointerDown = (e, ent) => {
-        e.stopPropagation(); // Evita que se dispare el paneo del fondo
-        
+        e.stopPropagation();
         if (toolMode === "connect") {
           if (!connectFrom) {
             setConnectFrom(ent.id);
@@ -1741,6 +1739,7 @@
                               setSelectedEntityId(null);
                             }}
                             className="cursor-pointer group"
+                            style={{ touchAction: "none" }}
                           >
                             <path
                               d={pathData}
@@ -1791,6 +1790,7 @@
                               e.stopPropagation();
                               setEditingEntityModalId(ent.id);
                             }}
+                            style={{ touchAction: "none" }}
                           >
                             <rect
                               width={CARD_W}
